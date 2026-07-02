@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kredibilite Alıştırmaları</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{
+    --bg:#0c1116; --surface:#141b22; --surface-2:#1b242e; --edge:#27323d;
+    --ink:#e8eef2; --muted:#8ea0ab; --faint:#5d6b76;
+    --prior:#ffcf4d;   /* manual / prior */
+    --data:#3fd8ff;    /* observed data  */
+    --cred:#c6ff3f;    /* credibility / Z */
+    --good:#7ee787; --bad:#ff6b6b; --warn:#ffc14d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif; background:
+      radial-gradient(120% 70% at 50% -10%, #16202a 0%, var(--bg) 55%, #080b0e 100%);
+    color:var(--ink); min-height:100dvh; line-height:1.5; -webkit-text-size-adjust:100%;}
+  .wrap{max-width:560px; margin:0 auto; padding:18px 16px 40px;}
+  .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum";
+        font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+
+  header{display:flex; align-items:center; gap:11px; margin-bottom:14px;}
+  .mark{width:38px;height:38px;border-radius:10px; flex:none; display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--cred),#6fae1f); color:#06210a; font-family:'Anton'; font-size:22px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.16);}
+  header h1{font-family:'Anton'; font-weight:400; font-size:23px; letter-spacing:.02em; margin:0; line-height:1;}
+  header .sub{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
+  .tally{margin-left:auto; text-align:right;}
+  .tally .n{font-family:'Anton'; font-size:24px; line-height:.9;}
+  .tally .l{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+
+  /* topic chips */
+  .chips{display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; -webkit-overflow-scrolling:touch;}
+  .chip{flex:none; border:1px solid var(--edge); background:var(--surface); color:var(--muted);
+    border-radius:999px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+    transition:.15s;}
+  .chip[aria-selected="true"]{background:var(--cred); color:#06210a; border-color:var(--cred);}
+
+  /* problem card */
+  .card{background:var(--surface); border:1px solid var(--edge); border-radius:16px; padding:16px;
+    box-shadow:0 12px 30px rgba(0,0,0,.4);}
+  .ttl{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .hintbtn{margin-left:auto; border:1px solid rgba(255,207,77,.35); background:rgba(255,207,77,.10);
+    color:var(--prior); border-radius:999px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;
+    white-space:nowrap; transition:.15s;}
+  .hintbtn:active{transform:translateY(1px);}
+  .hintbtn.on{background:var(--prior); color:#2a2000; border-color:var(--prior);}
+  .hintbox{display:none; margin:0 0 12px; padding:12px 13px; font-size:13.5px; line-height:1.55;
+    color:var(--ink); background:rgba(255,207,77,.07); border:1px solid rgba(255,207,77,.28);
+    border-left:3px solid var(--prior); border-radius:10px;}
+  .hintbox.show{display:block;}
+  .hintbox b{color:var(--prior);}
+  .ttl .tag{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--cred);
+    background:rgba(198,255,63,.12); border:1px solid rgba(198,255,63,.25); padding:3px 8px; border-radius:6px; font-weight:700;}
+  .scenario{font-size:14.5px; color:var(--ink);}
+  .scenario .q{color:var(--ink); font-weight:600;}
+
+  .givens{display:flex; flex-wrap:wrap; gap:7px; margin:13px 0 4px;}
+  .give{background:var(--surface-2); border:1px solid var(--edge); border-radius:9px; padding:7px 10px; font-size:13px;}
+  .give .k{font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); display:block; margin-bottom:1px;}
+  .give .v{font-weight:700;} .give.prior .v{color:var(--prior);} .give.data .v{color:var(--data);}
+  .give.cred .v{color:var(--cred);}
+
+  .answer{margin-top:16px;}
+  .answer label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
+  .ansrow{display:flex; gap:9px;}
+  .inp{flex:1; min-width:0; background:var(--surface-2); border:1.5px solid var(--edge); border-radius:11px;
+    color:var(--ink); font-size:17px; padding:13px 14px; outline:none; font-family:ui-monospace,monospace;}
+  .inp:focus{border-color:var(--cred);}
+  .inp.ok{border-color:var(--good);} .inp.no{border-color:var(--bad);}
+  .unit{align-self:center; font-size:12.5px; color:var(--faint); min-width:54px;}
+
+  .btn{border:none; border-radius:11px; padding:13px 16px; font-weight:700; font-size:14px; cursor:pointer;
+    background:linear-gradient(160deg,var(--cred),#7cb023); color:#06210a; transition:transform .05s;}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--edge);}
+  .btnrow{display:flex; gap:9px; margin-top:12px;}
+  .btnrow .btn{flex:1;}
+
+  .feedback{margin-top:12px; font-size:13.5px; min-height:20px; font-weight:600;}
+  .feedback.ok{color:var(--good);} .feedback.no{color:var(--bad);} .feedback.near{color:var(--warn);}
+
+  /* solution */
+  .sol{margin-top:14px; border-top:1px solid var(--edge); padding-top:13px; display:none;}
+  .sol.show{display:block;}
+  .sol h3{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 9px;}
+  .step{display:flex; gap:10px; margin-bottom:10px; font-size:13.5px;}
+  .step .n{width:20px;height:20px;border-radius:50%; flex:none; background:var(--surface-2); color:var(--cred);
+    display:grid;place-items:center; font-size:11px; font-weight:700; margin-top:1px;}
+  .step .t .mono{color:var(--ink);}
+  .step .t em{color:var(--muted); font-style:normal;}
+  .finalbox{background:rgba(198,255,63,.08); border:1px solid rgba(198,255,63,.25); border-radius:10px;
+    padding:10px 12px; font-size:14px; margin-top:6px;}
+  .finalbox b{color:var(--cred);}
+
+  /* reference */
+  details{margin-top:16px; background:var(--surface); border:1px solid var(--edge); border-radius:14px; overflow:hidden;}
+  summary{padding:13px 15px; font-size:13px; font-weight:700; cursor:pointer; list-style:none; color:var(--ink);
+    display:flex; align-items:center; gap:8px;}
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"▸"; color:var(--cred); transition:.2s;}
+  details[open] summary::before{transform:rotate(90deg);}
+  .ref{padding:0 15px 15px; font-size:13px; color:var(--ink);}
+  .ref .blk{margin-bottom:14px;}
+  .ref .blk h4{margin:0 0 5px; font-size:12px; color:var(--cred); letter-spacing:.04em;}
+  .ref .f{font-family:ui-monospace,monospace; background:var(--surface-2); border:1px solid var(--edge);
+    border-radius:8px; padding:9px 11px; line-height:1.7; font-size:12.5px;}
+  .ref p{margin:5px 0 0; color:var(--muted); font-size:12px;}
+  /* embedded data table inside a scenario */
+  table.dtable{width:100%; border-collapse:collapse; margin:13px 0 2px; font-size:13px;}
+  table.dtable th, table.dtable td{border:1px solid var(--edge); padding:6px 9px; text-align:center;}
+  table.dtable th{color:var(--muted); font-weight:600; font-size:11px; background:var(--surface-2); letter-spacing:.04em;}
+  table.dtable td:first-child, table.dtable th:first-child{text-align:left; color:var(--muted);}
+  /* multi-answer rows (EPV/VHM) */
+  .part{margin-bottom:13px;} .part:last-child{margin-bottom:0;}
+  .part > label{font-size:12.5px; color:var(--muted); display:block; margin-bottom:6px;}
+  table.zt{width:100%; border-collapse:collapse; margin-top:6px; font-size:12.5px;}
+  table.zt td,table.zt th{border:1px solid var(--edge); padding:5px 8px; text-align:center;}
+  table.zt th{color:var(--muted); font-weight:600; font-size:11px;}
+  .legendline{display:flex; gap:14px; flex-wrap:wrap; margin:2px 0 16px; font-size:11.5px; color:var(--muted);}
+  .legendline span{display:flex; align-items:center; gap:6px;}
+  .d{width:10px;height:10px;border-radius:50%;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">Z</div>
+    <div>
+      <h1>KREDİBİLİTE ALIŞTIRMALARI</h1>
+      <div class="sub">Tam · Kısmi · Bühlmann</div>
+    </div>
+    <div class="tally">
+      <div class="n mono"><span id="solved">0</span><span style="color:var(--faint)">/</span><span id="tries">0</span></div>
+      <div class="l">Çözülen</div>
+    </div>
+  </header>
+
+  <div class="legendline">
+    <span><span class="d" style="background:var(--prior)"></span>manuel / önsel (μ)</span>
+    <span><span class="d" style="background:var(--data)"></span>gözlemlenen veri (x̄)</span>
+    <span><span class="d" style="background:var(--cred)"></span>kredibilite (Z)</span>
+  </div>
+
+  <div class="chips" id="chips">
+    <button class="chip" data-t="A" aria-selected="true">Tam kredibilite</button>
+    <button class="chip" data-t="B" aria-selected="false">Kısmi Z</button>
+    <button class="chip" data-t="C" aria-selected="false">Kredibilite tahmini</button>
+    <button class="chip" data-t="D" aria-selected="false">Bühlmann Z</button>
+    <button class="chip" data-t="E" aria-selected="false">Bühlmann primi</button>
+    <button class="chip" data-t="F" aria-selected="false">EPV &amp; VHM · sınıflar</button>
+    <button class="chip" data-t="G" aria-selected="false">EPV &amp; VHM · Poisson</button>
+    <button class="chip" data-t="H" aria-selected="false">EPV &amp; VHM · veriden</button>
+    <button class="chip" data-t="M" aria-selected="false">Karışık</button>
+  </div>
+
+  <div class="card">
+    <div class="ttl"><span class="tag" id="ptag">—</span><button class="hintbtn" id="hintBtn">💡 İpucu</button></div>
+    <div class="scenario" id="scenario">Yükleniyor…</div>
+    <div class="hintbox" id="hintbox"></div>
+    <div class="givens" id="givens"></div>
+
+    <div class="answer">
+      <label id="qlabel">Cevabın</label>
+      <div class="ansrow" id="single">
+        <input class="inp mono" id="inp" inputmode="decimal" autocomplete="off" placeholder="…">
+        <span class="unit" id="unit"></span>
+      </div>
+      <div id="multi" style="display:none"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn ghost" id="solBtn">Çözümü göster</button>
+      <button class="btn" id="checkBtn">Kontrol et</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+
+    <div class="sol" id="sol">
+      <h3>Adım adım çözüm</h3>
+      <div id="steps"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn ghost" id="newBtn" style="flex:1">Yeni soru ↻</button>
+    </div>
+  </div>
+
+  <details>
+    <summary>Formül referansı</summary>
+    <div class="ref">
+      <div class="blk">
+        <h4>Sınırlı dalgalanma — tam kredibilite</h4>
+        <div class="f">λ_F = ( z<sub>p</sub> / r )²&nbsp;&nbsp;<span style="color:var(--faint)">beklenen hasar</span></div>
+        <p>z<sub>p</sub>, p güveni için iki taraflı normal değerdir; r tolerans. Poisson hasar sayısı varsayar (Var = ortalama). Toplam/saf prim için (1 + CV²<sub>şiddet</sub>) ile çarp.</p>
+      </div>
+      <div class="blk">
+        <h4>Kısmi kredibilite (karekök kuralı)</h4>
+        <div class="f">Z = min( 1 , √( n / λ_F ) )</div>
+        <p>n = fiilen gözlemlenen hasar sayısı. Standardın altındayken verin yalnızca kısmi kredi alır.</p>
+      </div>
+      <div class="blk">
+        <h4>Kredibilite tahmini</h4>
+        <div class="f">Tahmin = <span style="color:var(--cred)">Z</span>·<span style="color:var(--data)">x̄</span> + (1−<span style="color:var(--cred)">Z</span>)·<span style="color:var(--prior)">μ</span></div>
+        <p>Gözlemlenen ortalamayı manuel/önsel ile harmanla. Hem klasik hem Bühlmann için aynı yapı.</p>
+      </div>
+      <div class="blk">
+        <h4>Bühlmann (en yüksek doğruluk)</h4>
+        <div class="f">k = EPV / VHM = E[Var(X|θ)] / Var(E[X|θ])<br>Z = n / (n + k)</div>
+        <p>EPV = beklenen süreç varyansı (bir risk içindeki gürültü). VHM = hipotetik ortalamaların varyansı (riskler arası yayılım). n→∞ iken Z→1. Bühlmann-Straub: n yerine toplam maruziyet m kullan.</p>
+      </div>
+      <div class="blk">
+        <h4>EPV & VHM hesaplama</h4>
+        <div class="f">μ(θ)=E[X|θ], &nbsp; v(θ)=Var(X|θ)<br>EPV = E[ v(θ) ] = Σ P(θ)·v(θ)<br>VHM = Var( μ(θ) ) = E[μ²] − (E[μ])²</div>
+        <p>Poisson kısayolu: v(λ)=μ(λ)=λ, yani EPV = E[Λ] ve VHM = Var(Λ). Veriden: EPV = risk içi örneklem varyanslarının ortalaması; VHM = (risk ortalamalarının örneklem varyansı) − EPV/n.</p>
+      </div>
+      <div class="blk">
+        <h4>İki taraflı z değerleri</h4>
+        <table class="zt">
+          <tr><th>p</th><td>%80</td><td>%90</td><td>%95</td><td>%99</td></tr>
+          <tr><th>z<sub>p</sub></th><td>1.282</td><td>1.645</td><td>1.960</td><td>2.576</td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const ZT = { "80":1.282, "90":1.645, "95":1.960, "99":2.576 };
+  const rnd = (a,b)=> a + Math.random()*(b-a);
+  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+  const round = (x,d)=> { const f=Math.pow(10,d); return Math.round(x*f)/f; };
+  const fmt = (x,d)=> round(x,d).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const sum = a => a.reduce((x,y)=>x+y,0);
+  const shuffle = a => a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
+  function miniTable(headers, rows){
+    const h='<tr>'+headers.map(x=>`<th>${x}</th>`).join('')+'</tr>';
+    const b=rows.map(r=>'<tr>'+r.map((c,ci)=>ci===0?`<td>${c}</td>`:`<td class="mono">${c}</td>`).join('')+'</tr>').join('');
+    return `<table class="dtable">${h}${b}</table>`;
+  }
+
+  let topic = "A";
+  let cur = null;            // current problem {answer, tol, ...}
+  let solved = 0, tries = 0;
+
+  const TITLES = {A:"Tam kredibilite", B:"Kısmi kredibilite", C:"Kredibilite tahmini",
+                  D:"Bühlmann · Z", E:"Bühlmann · prim"};
+
+  // ---------- generators ----------
+  function genA(){ // full credibility standard (claims)
+    const p = pick(["80","90","95","99"]);
+    const r = pick([0.025,0.05,0.075,0.10]);
+    const z = ZT[p];
+    const lamF = Math.pow(z/r,2);
+    return {
+      type:"A", tag:"Tam kredibilite",
+      hint:`Tahminin şansa göre biraz oynar. İki şeye karar veriyorsun: <b>ne kadar yakın</b> olsun (tolerans r) ve bu yakınlık <b>ne sıklıkta</b> tutsun (güven p). "%90" şu demek: bu işi 100 kez yapsan en az 90'ında tahmin o dar banda düşsün. Daha çok güven → daha çok hasar gerekir; bandı gevşetirsen → daha az. λ_F = (z/r)² tam bunu sayıya çevirir.`,
+      scenario:`Yeni bir sağlık sigortası ürününü fiyatlandırıyorsun. Gözlemlenen hasar frekansına <span class="q">tam kredibilite</span> tanıman için tahminin, gerçek değerden en fazla <b>%${(r*100)}</b> sapmalı ve bu <b>%${p}</b> olasılıkla sağlanmalı. Hasar sayıları Poisson dağılır.`,
+      givens:[ ["güven p", "%"+p, ""], ["tolerans r", "%"+(r*100), ""], ["z değeri", z.toFixed(3), "cred"] ],
+      qlabel:"Tam kredibilite için gereken hasar sayısı", unit:"hasar",
+      answer: Math.round(lamF), tol:{type:"int", pad:1},
+      steps:[
+        ["İki taraflı z değerini %"+p+" güven için al.", `z = <span class="mono">${z.toFixed(3)}</span>`],
+        ["Frekans için tam kredibilite standardını uygula.", `λ_F = (z / r)²`],
+        ["Sayıları yerine koy.", `λ_F = (${z.toFixed(3)} / ${r})² = (${round(z/r,2)})²`],
+      ],
+      final:`λ_F = <b>${Math.round(lamF).toLocaleString()}</b> beklenen hasar sayısı`
+    };
+  }
+
+  function genB(){ // partial credibility Z (sqrt rule)
+    const p = pick(["90","95"]); const r = pick([0.05,0.075]);
+    const lamF = Math.round(Math.pow(ZT[p]/r,2));
+    const n = Math.round(rnd(0.08,1.4)*lamF);
+    const Z = Math.min(1, Math.sqrt(n/lamF));
+    const capped = n>=lamF;
+    return {
+      type:"B", tag:"Kısmi kredibilite",
+      hint:`Gereken hasara henüz ulaşmadıysan verine tam güvenemezsin, <b>kısmi</b> güven verirsin. Karekök kuralı: elindeki hasarın gerekene oranının karekökü. Az veri → küçük Z (önsele yaslan), veri arttıkça Z büyür. Z asla 1'i geçmez.`,
+      scenario:`Portföyünde <span class="q">${n.toLocaleString()} hasar</span> gözlemlendi. Bu risk için tam kredibilite <b>${lamF.toLocaleString()}</b> hasar gerektirir. Karekök kuralına göre verin ne kadar <b>Z</b> kredibilite kazanır?`,
+      givens:[ ["gözlemlenen hasar n", n.toLocaleString(), "data"], ["standart λ_F", lamF.toLocaleString(), ""] ],
+      qlabel:"Kredibilite faktörü Z (0–1)", unit:"",
+      answer: round(Z,3), tol:{type:"abs", eps:0.02},
+      steps:[
+        ["Kısmi kredibilite için karekök kuralı.", `Z = √( n / λ_F )`],
+        ["Yerine koy.", `Z = √( ${n.toLocaleString()} / ${lamF.toLocaleString()} ) = √(${round(n/lamF,3)})`],
+        [ capped ? "Sonuç 1'i aşıyor, 1'e sınırla." : "Aralık içinde, sınırlamaya gerek yok.",
+          capped ? `√(${round(n/lamF,3)}) = ${round(Math.sqrt(n/lamF),3)} → 1'e sınırlandı` : `= ${round(Math.sqrt(n/lamF),3)}` ],
+      ],
+      final:`Z = <b>${fmt(Z,3)}</b>${capped?" (tam kredibilite)":""}`
+    };
+  }
+
+  function genC(){ // limited-fluctuation credibility estimate of frequency
+    const p = pick(["90","95"]); const r = pick([0.05,0.075]);
+    const lamF = Math.round(Math.pow(ZT[p]/r,2));
+    const n = Math.round(rnd(0.1,0.9)*lamF);
+    const Z = Math.min(1, Math.sqrt(n/lamF));
+    const obs = round(rnd(0.12,0.42),3);   // observed frequency
+    const man = round(rnd(0.12,0.42),3);   // manual / prior frequency
+    const est = Z*obs + (1-Z)*man;
+    return {
+      type:"C", tag:"Kredibilite tahmini",
+      hint:`İki bilgin var: <b>manuel/önsel</b> değer (baştan beklentin) ve <b>gözlemlenen</b> değer (veri). Nihai tahmin bu ikisinin karışımı: Z büyükse veriye, küçükse önsele ağırlık verirsin. Tahmin = Z·veri + (1−Z)·önsel.`,
+      scenario:`Bu ürün için manuel (önsel) frekans <b style="color:var(--prior)">${obs===man?man:man}</b>. <b>${n.toLocaleString()}</b> hasar üzerinden <span class="q">${obs}</span> gözlemledin; tam kredibilite standardı ise <b>${lamF.toLocaleString()}</b>. Kredibilite ağırlıklı frekans tahmini nedir?`,
+      givens:[ ["manuel μ", man.toFixed(3), "prior"], ["gözlemlenen x̄", obs.toFixed(3), "data"],
+               ["hasar n", n.toLocaleString(), ""], ["standart λ_F", lamF.toLocaleString(), ""] ],
+      qlabel:"Kredibilite ağırlıklı frekans", unit:"poliçe başına",
+      answer: round(est,4), tol:{type:"rel", pct:0.02},
+      steps:[
+        ["Z'yi karekök kuralıyla bul.", `Z = √(${n.toLocaleString()}/${lamF.toLocaleString()}) = <span class="mono">${fmt(Z,3)}</span>`],
+        ["Gözlemleneni manuel ile harmanla.", `Tahmin = Z·x̄ + (1−Z)·μ`],
+        ["Yerine koy.", `Tahmin = ${fmt(Z,3)}·${obs} + ${fmt(1-Z,3)}·${man}`],
+      ],
+      final:`Tahmin = <b>${fmt(est,4)}</b> poliçe başına hasar`
+    };
+  }
+
+  function buhlmannParams(){
+    const k = pick([2,2.5,3,4,5]);
+    const VHM = pick([20,40,50,80,100]);
+    const EPV = k*VHM;
+    const n = Math.floor(rnd(1,13));
+    const Z = n/(n+k);
+    return {k,VHM,EPV,n,Z};
+  }
+
+  function genD(){ // Bühlmann Z
+    const {k,VHM,EPV,n,Z}=buhlmannParams();
+    return {
+      type:"D", tag:"Bühlmann · Z",
+      hint:`Burada kesin çizgi yok, <b>sürekli</b> bir karışım var. k = EPV/VHM: risk içi gürültü (EPV) büyükse veriye az güven; riskler arası fark (VHM) büyükse çok güven. Yıl (n) arttıkça Z = n/(n+k) büyür — daha çok gördükçe verine daha çok güvenirsin.`,
+      scenario:`Bir riskin beklenen süreç varyansı (EPV) ve hipotetik ortalamalarının varyansı (VHM) aşağıdaki gibi; <span class="q">${n} yıllık</span> deneyim var. Bühlmann kredibilitesi <b>Z</b>'yi bul.`,
+      givens:[ ["EPV", EPV.toLocaleString(), "data"], ["VHM", VHM.toLocaleString(), "prior"], ["yıl n", String(n), ""] ],
+      qlabel:"Bühlmann kredibilitesi Z (0–1)", unit:"",
+      answer: round(Z,3), tol:{type:"abs", eps:0.02},
+      steps:[
+        ["k'yı hesapla.", `k = EPV / VHM = ${EPV.toLocaleString()} / ${VHM.toLocaleString()} = <span class="mono">${k}</span>`],
+        ["Bühlmann kredibilitesi.", `Z = n / (n + k)`],
+        ["Yerine koy.", `Z = ${n} / (${n} + ${k}) = ${n}/${n+k}`],
+      ],
+      final:`Z = <b>${fmt(Z,3)}</b>`
+    };
+  }
+
+  function genE(){ // Bühlmann credibility premium
+    const {k,VHM,EPV,n,Z}=buhlmannParams();
+    const xbar = Math.round(rnd(260,580));
+    const mu   = Math.round(rnd(260,580));
+    const prem = Z*xbar + (1-Z)*mu;
+    return {
+      type:"E", tag:"Bühlmann · prim",
+      hint:`Önce Z'yi bul (D'deki gibi), sonra primi harmanla: az deneyim → <b>kolektif</b> ortalamaya yakın, çok deneyim → bu riskin <b>kendi</b> ortalamasına yakın. Prim = Z·(risk ort.) + (1−Z)·(kolektif ort.).`,
+      scenario:`Kolektif (manuel) ortalama <b style="color:var(--prior)">${mu}</b>. Bu riskte <b>${n}</b> yılda ortalama <span class="q">${xbar}</span> gözlendi. Aşağıdaki EPV ve VHM ile hangi kredibilite primini uygularsın?`,
+      givens:[ ["EPV", EPV.toLocaleString(), "data"], ["VHM", VHM.toLocaleString(), ""],
+               ["yıl n", String(n), ""], ["risk ortalaması x̄", String(xbar), "data"], ["manuel μ", String(mu), "prior"] ],
+      qlabel:"Kredibilite primi", unit:"",
+      answer: round(prem,1), tol:{type:"rel", pct:0.015},
+      steps:[
+        ["Önce k, sonra Z'yi hesapla.", `k = ${EPV.toLocaleString()}/${VHM.toLocaleString()} = ${k}; &nbsp; Z = ${n}/(${n}+${k}) = <span class="mono">${fmt(Z,3)}</span>`],
+        ["Kredibilite primi.", `P = Z·x̄ + (1−Z)·μ`],
+        ["Yerine koy.", `P = ${fmt(Z,3)}·${xbar} + ${fmt(1-Z,3)}·${mu}`],
+      ],
+      final:`Prim = <b>${fmt(prem,1)}</b>`
+    };
+  }
+
+  const GEN = {A:genA, B:genB, C:genC, D:genD, E:genE, F:genF, G:genG, H:genH};
+
+  // ===== EPV & VHM calculation drills =====
+
+  function genF(){ // discrete classes, conditional mean & variance given
+    const c = pick([2,3]);
+    const probs = c===2 ? pick([[0.6,0.4],[0.5,0.5],[0.7,0.3],[0.75,0.25],[0.8,0.2]])
+                        : pick([[0.5,0.3,0.2],[0.4,0.4,0.2],[0.6,0.2,0.2],[0.5,0.25,0.25]]);
+    const mus = shuffle([2,3,4,5,6,8,10]).slice(0,c);
+    const vs  = Array.from({length:c}, ()=> pick([1,2,3,4,5,6,8,10]));
+    const lbls = ["A","B","C"].slice(0,c);
+    const EPV = sum(probs.map((p,i)=>p*vs[i]));
+    const Emu = sum(probs.map((p,i)=>p*mus[i]));
+    const Emu2= sum(probs.map((p,i)=>p*mus[i]*mus[i]));
+    const VHM = Emu2 - Emu*Emu;
+    const tbl = miniTable(["Sınıf","P(sınıf)","ortalama μ","varyans v"], lbls.map((L,i)=>[L, probs[i], mus[i], vs[i]]));
+    return {
+      type:"F", tag:"EPV & VHM · sınıflar",
+      hint:`İki gürültü kaynağı var. <b>EPV</b> = her sınıfın kendi içindeki oynaklığın ortalaması (hasarlar ortalamanın etrafında ne kadar zıplıyor). <b>VHM</b> = sınıf ortalamalarının birbirinden ne kadar farklı olduğu. EPV = olasılıkla ağırlıklı varyanslar; VHM = E[μ²] − (E[μ])².`,
+      scenario:`Bir portföy ${c===2?'iki':'üç'} risk sınıfına ayrılıyor. Her sınıf için bir poliçenin o sınıfta olma olasılığını, ortalama hasar düzeyini ve hasarlarının varyansını biliyorsun. <span class="q">EPV</span> ve <span class="q">VHM</span> değerlerini bul.${tbl}`,
+      givens:[],
+      parts:[
+        {label:"EPV — beklenen süreç varyansı", unit:"", answer:round(EPV,3), tol:{type:"num",pct:0.02,abs:0.02}},
+        {label:"VHM — hipotetik ortalamaların varyansı", unit:"", answer:round(VHM,3), tol:{type:"num",pct:0.02,abs:0.02}},
+      ],
+      steps:[
+        ["EPV, süreç varyansının sınıflar üzerinden ortalamasıdır.", `EPV = Σ P·v = ${probs.map((p,i)=>`${p}·${vs[i]}`).join(" + ")} = <span class="mono">${fmt(EPV,3)}</span>`],
+        ["VHM için önce sınıf ortalamalarının genel ortalaması.", `E[μ] = Σ P·μ = ${probs.map((p,i)=>`${p}·${mus[i]}`).join(" + ")} = ${fmt(Emu,3)}`],
+        ["Sonra kareli sınıf ortalamalarının ortalaması.", `E[μ²] = ${probs.map((p,i)=>`${p}·${mus[i]}²`).join(" + ")} = ${fmt(Emu2,3)}`],
+        ["VHM, bu sınıf ortalamalarının varyansıdır.", `VHM = E[μ²] − (E[μ])² = ${fmt(Emu2,3)} − ${fmt(Emu*Emu,3)}`],
+      ],
+      final:`EPV = <b>${fmt(EPV,3)}</b> &nbsp;·&nbsp; VHM = <b>${fmt(VHM,3)}</b> &nbsp;<span style="color:var(--faint)">(k = EPV/VHM = ${fmt(EPV/VHM,2)})</span>`
+    };
+  }
+
+  function genG(){ // Poisson mixing — v(λ)=μ(λ)=λ
+    const c = pick([2,3]);
+    const probs = c===2 ? pick([[0.6,0.4],[0.5,0.5],[0.7,0.3],[0.75,0.25]])
+                        : pick([[0.5,0.3,0.2],[0.4,0.4,0.2],[0.6,0.2,0.2]]);
+    const lams = shuffle([0.10,0.15,0.20,0.25,0.30,0.40,0.50]).slice(0,c);
+    const lbls = ["Tür A","Tür B","Tür C"].slice(0,c);
+    const EPV = sum(probs.map((p,i)=>p*lams[i]));
+    const El2 = sum(probs.map((p,i)=>p*lams[i]*lams[i]));
+    const VHM = El2 - EPV*EPV;
+    const tbl = miniTable(["Tür","P(tür)","λ (ort.=var.)"], lbls.map((L,i)=>[L, probs[i], lams[i].toFixed(2)]));
+    return {
+      type:"G", tag:"EPV & VHM · Poisson",
+      hint:`Poisson'un püf noktası: <b>varyans = ortalama</b>. Her tür için süreç varyansı da ortalaması da λ. O yüzden kısayol basit: EPV = Λ'nın ortalaması, VHM = Λ'nın varyansı.`,
+      scenario:`Yıllık hasar sayıları, ortalaması Λ olan Poisson dağılımlıdır ve Λ popülasyonda gösterildiği gibi değişir. <em style="color:var(--muted)">Poisson'da varyans, ortalamaya eşittir.</em> <span class="q">EPV</span> ve <span class="q">VHM</span> değerlerini bul.${tbl}`,
+      givens:[],
+      parts:[
+        {label:"EPV — beklenen süreç varyansı", unit:"", answer:round(EPV,4), tol:{type:"num",pct:0.04,abs:0.0015}},
+        {label:"VHM — hipotetik ortalamaların varyansı", unit:"", answer:round(VHM,4), tol:{type:"num",pct:0.05,abs:0.0015}},
+      ],
+      steps:[
+        ["Poisson'da süreç varyansı v(λ)=λ ve hipotetik ortalama μ(λ)=λ — aynı.", `yani EPV = E[Λ] ve VHM = Var(Λ)`],
+        ["EPV, Λ'nın beklenen değeridir.", `EPV = Σ P·λ = ${probs.map((p,i)=>`${p}·${lams[i].toFixed(2)}`).join(" + ")} = <span class="mono">${fmt(EPV,4)}</span>`],
+        ["VHM, Λ'nın varyansıdır.", `VHM = Σ P·λ² − (E[Λ])² = ${probs.map((p,i)=>`${p}·${lams[i].toFixed(2)}²`).join(" + ")} − ${fmt(EPV*EPV,4)}`],
+        ["Çıkar.", `VHM = ${fmt(El2,4)} − ${fmt(EPV*EPV,4)}`],
+      ],
+      final:`EPV = <b>${fmt(EPV,4)}</b> &nbsp;·&nbsp; VHM = <b>${fmt(VHM,4)}</b> &nbsp;<span style="color:var(--faint)">(EPV = Λ'nın ortalaması, VHM = Λ'nın varyansı)</span>`
+    };
+  }
+
+  function genH(){ // empirical / nonparametric estimation from a data table
+    const r = pick([2,3]); const n = pick([2,3]);
+    let data, rowMeans, grand, sVars, EPV, between, VHM, guard=0;
+    do{
+      guard++;
+      const bases = shuffle([3,5,7,9,11,4,6,8,10]).slice(0,r);
+      data = bases.map(b=> Array.from({length:n}, ()=> Math.max(0, b + pick([-1,0,1,-1,0,1,-2,2]) )));
+      rowMeans = data.map(row=> sum(row)/n);
+      grand = sum(rowMeans)/r;                               // equal n per row
+      sVars = data.map((row,i)=> sum(row.map(x=>(x-rowMeans[i])**2))/(n-1));
+      EPV = sum(sVars)/r;
+      between = sum(rowMeans.map(m=>(m-grand)**2))/(r-1);
+      VHM = between - EPV/n;
+    } while((EPV < 0.4 || VHM < 0.2) && guard<500);
+    const names = ["Sigortalı A","Sigortalı B","Sigortalı C"].slice(0,r);
+    const yrs = Array.from({length:n},(_,i)=>"Yıl "+(i+1));
+    const tbl = miniTable([""].concat(yrs), names.map((nm,i)=>[nm].concat(data[i])));
+    return {
+      type:"H", tag:"EPV & VHM · veriden",
+      hint:`Veriden tahmin. <b>EPV</b> = her sigortalının kendi yıllarındaki varyanslarının ortalaması (risk içi gürültü). <b>VHM</b> = sigortalı ortalamalarının yayılımı — ama bu yayılımda biraz gürültü de var, onu çıkarıyorsun: VHM = (ortalamaların varyansı) − EPV/n. O çıkarma en çok unutulan adım.`,
+      scenario:`${r} sigortalı ${n} yıl boyunca gözlemlendi (hasar sayıları aşağıda). <span class="q">EPV</span> ve <span class="q">VHM</span> değerlerini ampirik olarak (parametrik olmayan Bühlmann) tahmin et.${tbl}`,
+      givens:[],
+      parts:[
+        {label:"EPV — beklenen süreç varyansı (tahmin)", unit:"", answer:round(EPV,3), tol:{type:"num",pct:0.03,abs:0.06}},
+        {label:"VHM — hipotetik ortalamaların varyansı (tahmin)", unit:"", answer:round(VHM,3), tol:{type:"num",pct:0.04,abs:0.06}},
+      ],
+      steps:[
+        ["Her sigortalı için ortalama, sonra genel ortalama.", `${names.map((nm,i)=>`${nm.split(' ')[1]}=${fmt(rowMeans[i],2)}`).join(", ")} ; &nbsp; x̄ = ${fmt(grand,2)}`],
+        ["Sigortalı içi örneklem varyansları (n−1'e böl).", `s² = ${sVars.map(s=>fmt(s,3)).join(", ")}`],
+        ["EPV = bu satır içi varyansların ortalaması.", `EPV = (${sVars.map(s=>fmt(s,3)).join(" + ")}) / ${r} = <span class="mono">${fmt(EPV,3)}</span>`],
+        ["Satır ortalamalarının örneklem varyansı (r−1'e böl).", `satırlar arası = [${rowMeans.map(m=>`(${fmt(m,2)}−${fmt(grand,2)})²`).join(" + ")}] / ${r-1} = ${fmt(between,3)}`],
+        ["Süreç gürültüsünü çıkar — kilit adım.", `VHM = satırlar arası − EPV/n = ${fmt(between,3)} − ${fmt(EPV,3)}/${n} = ${fmt(between,3)} − ${fmt(EPV/n,3)}`],
+      ],
+      final:`EPV = <b>${fmt(EPV,3)}</b> &nbsp;·&nbsp; VHM = <b>${fmt(VHM,3)}</b> &nbsp;<span style="color:var(--faint)">(k = ${fmt(EPV/Math.max(VHM,1e-9),2)})</span>`
+    };
+  }
+
+  // ---------- render ----------
+  function load(){
+    const t = topic==="M" ? pick(["A","B","C","D","E","F","G","H"]) : topic;
+    cur = GEN[t]();
+    $('ptag').textContent = cur.tag;
+    // hint (İpucu)
+    $('hintbox').innerHTML = cur.hint || '';
+    $('hintbox').classList.remove('show');
+    $('hintBtn').classList.remove('on');
+    $('hintBtn').textContent = '💡 İpucu';
+    $('hintBtn').style.display = cur.hint ? 'inline-block' : 'none';
+    $('scenario').innerHTML = cur.scenario;
+    const g = $('givens'); g.innerHTML='';
+    (cur.givens||[]).forEach(([k,v,cls])=>{
+      const d=document.createElement('div'); d.className='give'+(cls?(' '+cls):'');
+      d.innerHTML=`<span class="k">${k}</span><span class="v mono">${v}</span>`;
+      g.appendChild(d);
+    });
+    // answer area: single vs multi-part
+    if(cur.parts){
+      $('single').style.display='none';
+      $('qlabel').style.display='none';
+      const m=$('multi'); m.style.display='block'; m.innerHTML='';
+      cur.parts.forEach((pt,i)=>{
+        const d=document.createElement('div'); d.className='part';
+        d.innerHTML=`<label>${pt.label}</label>
+          <div class="ansrow"><input class="inp mono" id="inp_${i}" inputmode="decimal" autocomplete="off" placeholder="…"><span class="unit">${pt.unit||''}</span></div>`;
+        m.appendChild(d);
+      });
+      cur.parts.forEach((pt,i)=> $('inp_'+i).addEventListener('keydown', e=>{ if(e.key==='Enter') check(); }));
+    } else {
+      $('single').style.display='flex';
+      $('qlabel').style.display='block';
+      $('multi').style.display='none'; $('multi').innerHTML='';
+      $('qlabel').textContent = cur.qlabel;
+      $('unit').textContent = cur.unit||'';
+      const inp=$('inp'); inp.value=''; inp.className='inp mono';
+    }
+    $('feedback').textContent=''; $('feedback').className='feedback';
+    // steps
+    const s=$('steps'); s.innerHTML='';
+    cur.steps.forEach((st,i)=>{
+      const row=document.createElement('div'); row.className='step';
+      row.innerHTML=`<div class="n">${i+1}</div><div class="t"><em>${st[0]}</em><br><span class="mono">${st[1]}</span></div>`;
+      s.appendChild(row);
+    });
+    const fb=document.createElement('div'); fb.className='finalbox'; fb.innerHTML=cur.final;
+    s.appendChild(fb);
+    $('sol').classList.remove('show');
+    $('solBtn').textContent='Çözümü göster';
+  }
+
+  function parseNum(v){
+    if(v==null) return NaN;
+    v=(''+v).replace(/\s|,/g,'').replace('%','');
+    return parseFloat(v);
+  }
+
+  function judge(val, ans, tol){
+    if(isNaN(val)) return "empty";
+    if(tol.type==="int"){ return Math.abs(val-ans)<=(tol.pad||0)+0.5 ? "ok" : (Math.abs(val-ans)<=Math.max(2,ans*0.01)?"near":"no"); }
+    if(tol.type==="abs"){ const d=Math.abs(val-ans); return d<=tol.eps?"ok":(d<=tol.eps*2.5?"near":"no"); }
+    if(tol.type==="rel"){ const d=Math.abs(val-ans)/Math.max(1e-9,Math.abs(ans)); return d<=tol.pct?"ok":(d<=tol.pct*3?"near":"no"); }
+    if(tol.type==="num"){ const d=Math.abs(val-ans); const rel=d/Math.max(1e-9,Math.abs(ans));
+      if(rel<=tol.pct || d<=tol.abs) return "ok";
+      return (rel<=tol.pct*3 || d<=tol.abs*3) ? "near" : "no"; }
+    return "no";
+  }
+
+  function check(){
+    if(!cur) return;
+    const fb=$('feedback');
+    // multi-part (EPV/VHM) problems
+    if(cur.parts){
+      const filled = cur.parts.every((pt,i)=> !isNaN(parseNum($('inp_'+i).value)));
+      if(!filled){ fb.className='feedback no'; fb.textContent='Hem EPV hem VHM değerini gir.'; return; }
+      let allOk=true, anyNear=false;
+      cur.parts.forEach((pt,i)=>{
+        const el=$('inp_'+i); const v=parseNum(el.value);
+        const verdict=judge(v, pt.answer, pt.tol);
+        if(verdict==='ok'){ el.className='inp mono ok'; }
+        else if(verdict==='near'){ el.className='inp mono'; anyNear=true; allOk=false; }
+        else { el.className='inp mono no'; allOk=false; }
+      });
+      tries++;
+      if(allOk){ solved++; fb.className='feedback ok'; fb.textContent='İkisi de doğru. ✓'; }
+      else if(anyNear){ fb.className='feedback near'; fb.textContent='En az birinde yakınsın — yuvarlamayı kontrol et, sonra adımlara bak.'; }
+      else { fb.className='feedback no'; fb.textContent='Tam değil — yeşil kutular doğru, kırmızılar yanlış. “Çözümü göster”e dokun.'; }
+      $('solved').textContent=solved; $('tries').textContent=tries;
+      return;
+    }
+    const val = parseNum($('inp').value);
+    const inp=$('inp');
+    const verdict = judge(val, cur.answer, cur.tol);
+    if(verdict==="empty"){ fb.className='feedback no'; fb.textContent='Önce bir cevap gir.'; return; }
+    tries++;
+    if(verdict==="ok"){
+      solved++;
+      inp.className='inp mono ok';
+      fb.className='feedback ok'; fb.textContent='Doğru. ✓';
+    } else if(verdict==="near"){
+      inp.className='inp mono';
+      fb.className='feedback near';
+      fb.textContent='Çok yakın — yuvarlamayı kontrol et, sonra çözüme bak.';
+    } else {
+      inp.className='inp mono no';
+      fb.className='feedback no';
+      fb.textContent='Tam değil. Adımları görmek için “Çözümü göster”e dokun.';
+    }
+    $('solved').textContent=solved; $('tries').textContent=tries;
+  }
+
+  // ---------- wire ----------
+  $('chips').addEventListener('click', e=>{
+    const c=e.target.closest('.chip'); if(!c) return;
+    [...$('chips').children].forEach(x=>x.setAttribute('aria-selected','false'));
+    c.setAttribute('aria-selected','true');
+    topic=c.dataset.t; load();
+  });
+  $('checkBtn').onclick=check;
+  $('hintBtn').onclick=()=>{
+    const box=$('hintbox'); const open=box.classList.toggle('show');
+    $('hintBtn').classList.toggle('on', open);
+    $('hintBtn').textContent = open ? '💡 Gizle' : '💡 İpucu';
+  };
+  $('newBtn').onclick=load;
+  $('solBtn').onclick=()=>{
+    const s=$('sol'); const open=s.classList.toggle('show');
+    $('solBtn').textContent= open?'Çözümü gizle':'Çözümü göster';
+  };
+  $('inp').addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
+
+  load();
+})();
+</script>
+</body>
+</html>
