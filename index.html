@@ -132,7 +132,7 @@
     <div class="mark">Z</div>
     <div>
       <h1>KREDİBİLİTE ALIŞTIRMALARI</h1>
-      <div class="sub">Tam · Kısmi · Bühlmann</div>
+      <div class="sub">Tam · Kısmi · Bühlmann · Bayes</div>
     </div>
     <div class="tally">
       <div class="n mono"><span id="solved">0</span><span style="color:var(--faint)">/</span><span id="tries">0</span></div>
@@ -155,6 +155,10 @@
     <button class="chip" data-t="F" aria-selected="false">EPV &amp; VHM · sınıflar</button>
     <button class="chip" data-t="G" aria-selected="false">EPV &amp; VHM · Poisson</button>
     <button class="chip" data-t="H" aria-selected="false">EPV &amp; VHM · veriden</button>
+    <button class="chip" data-t="I" aria-selected="false">Bayes · sonsal</button>
+    <button class="chip" data-t="J" aria-selected="false">Bayes · sonsal ort.</button>
+    <button class="chip" data-t="K" aria-selected="false">Bayes · Z</button>
+    <button class="chip" data-t="L" aria-selected="false">Bayes · öngörü</button>
     <button class="chip" data-t="M" aria-selected="false">Karışık</button>
   </div>
 
@@ -216,6 +220,11 @@
         <h4>EPV & VHM hesaplama</h4>
         <div class="f">μ(θ)=E[X|θ], &nbsp; v(θ)=Var(X|θ)<br>EPV = E[ v(θ) ] = Σ P(θ)·v(θ)<br>VHM = Var( μ(θ) ) = E[μ²] − (E[μ])²</div>
         <p>Poisson kısayolu: v(λ)=μ(λ)=λ, yani EPV = E[Λ] ve VHM = Var(Λ). Veriden: EPV = risk içi örneklem varyanslarının ortalaması; VHM = (risk ortalamalarının örneklem varyansı) − EPV/n.</p>
+      </div>
+      <div class="blk">
+        <h4>Bayesçi kredibilite — Poisson–Gama</h4>
+        <div class="f">Önsel: λ ~ Gama(α, β)&nbsp;&nbsp;<span style="color:var(--faint)">β = oran, ort.=α/β</span><br>Sonsal: λ|veri ~ Gama(<span style="color:var(--data)">α+S</span>, <span style="color:var(--data)">β+n</span>)<br>Sonsal ort. = (α+S)/(β+n)<br>Z = <span style="color:var(--cred)">n / (n+β)</span></div>
+        <p>S = toplam hasar, n = yıl sayısı. Eşlenik olduğu için sonsal yine Gama. Sonsal ortalama = Z·(S/n) + (1−Z)·(α/β); yani β, Bühlmann'daki k rolündedir. Gelecek yıl beklenen hasar = sonsal ortalama.</p>
       </div>
       <div class="blk">
         <h4>İki taraflı z değerleri</h4>
@@ -371,7 +380,8 @@
     };
   }
 
-  const GEN = {A:genA, B:genB, C:genC, D:genD, E:genE, F:genF, G:genG, H:genH};
+  const GEN = {A:genA, B:genB, C:genC, D:genD, E:genE, F:genF, G:genG, H:genH,
+               I:genI, J:genJ, K:genK, L:genL};
 
   // ===== EPV & VHM calculation drills =====
 
@@ -472,9 +482,104 @@
     };
   }
 
+  // ===== Bayesçi kredibilite — Poisson–Gama eşlenik =====
+  // Önsel λ ~ Gama(α, β) [β = oran] ; veri: n yıl, toplam S hasar
+  // Sonsal λ | veri ~ Gama(α+S, β+n) ; sonsal ort. = (α+S)/(β+n) ; Z = n/(n+β)
+
+  function bayesParams(){
+    const alpha = Math.floor(rnd(2,9));      // önsel şekil 2..8
+    const beta  = Math.floor(rnd(1,6));      // önsel oran  1..5
+    const n     = Math.floor(rnd(2,7));      // yıl 2..6
+    const S     = Math.floor(rnd(n, n*6+1)); // toplam hasar
+    return {alpha,beta,n,S, aPost:alpha+S, bPost:beta+n};
+  }
+
+  function genI(){ // sonsal parametreler (şekil & oran)
+    const {alpha,beta,n,S,aPost,bPost} = bayesParams();
+    return {
+      type:"I", tag:"Bayes · sonsal dağılım",
+      hint:`Poisson veri + <b>Gama önsel</b> = eşlenik: sonsal yine Gama olur, integral almana gerek kalmaz. Güncelleme çok sade — <b>şekle</b> gözlenen toplam hasarı, <b>orana</b> da yıl sayısını eklersin.`,
+      scenario:`Bir riskin yıllık hasar sayısı Poisson(λ) dağılıyor. λ için önsel inancın <b style="color:var(--prior)">Gama(α=${alpha}, β=${beta})</b> — burada β orandır. <b>${n} yıl</b> boyunca toplam <span class="q">${S} hasar</span> gözledin. λ'nın <span class="q">sonsal</span> dağılımının şekil ve oran parametrelerini bul.`,
+      givens:[ ["önsel şekil α", String(alpha), "prior"], ["önsel oran β", String(beta), "prior"],
+               ["yıl n", String(n), "data"], ["toplam hasar S", String(S), "data"] ],
+      parts:[
+        {label:"Sonsal şekil (α + S)", unit:"", answer:aPost, tol:{type:"int"}},
+        {label:"Sonsal oran (β + n)",  unit:"", answer:bPost, tol:{type:"int"}},
+      ],
+      steps:[
+        ["Poisson–Gama eşleniktir; sonsal yine Gama.", `λ | veri ~ Gama(α + S, β + n)`],
+        ["Şekli güncelle: önsel şekle toplam hasarı ekle.", `şekil = ${alpha} + ${S} = <span class="mono">${aPost}</span>`],
+        ["Oranı güncelle: önsel orana yıl sayısını ekle.", `oran = ${beta} + ${n} = <span class="mono">${bPost}</span>`],
+      ],
+      final:`Sonsal dağılım = <b>Gama(${aPost}, ${bPost})</b>`
+    };
+  }
+
+  function genJ(){ // sonsal ortalama
+    const {alpha,beta,n,S,aPost,bPost} = bayesParams();
+    const mean = aPost/bPost;
+    return {
+      type:"J", tag:"Bayes · sonsal ortalama",
+      hint:`Bir Gama(şekil, oran) dağılımının ortalaması <b>şekil / oran</b>'dır. Önce sonsalı güncelle (şekil=α+S, oran=β+n), sonra böl. Bu değer λ hakkındaki güncellenmiş en iyi tahminindir.`,
+      scenario:`λ için önsel inancın <b style="color:var(--prior)">Gama(α=${alpha}, β=${beta})</b> (β = oran). <b>${n} yıl</b> içinde toplam <span class="q">${S} hasar</span> gözledin. λ'nın <span class="q">sonsal ortalaması</span> nedir?`,
+      givens:[ ["önsel şekil α", String(alpha), "prior"], ["önsel oran β", String(beta), "prior"],
+               ["yıl n", String(n), "data"], ["toplam hasar S", String(S), "data"] ],
+      qlabel:"Sonsal ortalama  E[λ | veri]", unit:"hasar/yıl",
+      answer: round(mean,4), tol:{type:"num", pct:0.02, abs:0.01},
+      steps:[
+        ["Sonsalı güncelle.", `Gama(α+S, β+n) = Gama(${aPost}, ${bPost})`],
+        ["Gama ortalaması = şekil / oran.", `E[λ|veri] = (α+S) / (β+n)`],
+        ["Yerine koy.", `= ${aPost} / ${bPost} = <span class="mono">${fmt(mean,4)}</span>`],
+      ],
+      final:`Sonsal ortalama = <b>${fmt(mean,4)}</b> hasar/yıl`
+    };
+  }
+
+  function genK(){ // Bayesçi kredibilite faktörü Z = n/(n+β)
+    const {alpha,beta,n,S,aPost,bPost} = bayesParams();
+    const Z = n/(n+beta);
+    const xbar = S/n, priorMean = alpha/beta;
+    return {
+      type:"K", tag:"Bayes · kredibilite Z",
+      hint:`Sonsal ortalamayı bir <b>karışım</b> olarak yazabilirsin: örneklem ortalaması (S/n) ile önsel ortalama (α/β) arasında. Veriye düşen ağırlık <b>Z = n/(n+β)</b>. Önsel oran β burada bir tür "önsel yıl sayısı" gibi davranır — yani bu, k=β olan Bühlmann ile birebir aynı.`,
+      scenario:`λ için önsel <b style="color:var(--prior)">Gama(α=${alpha}, β=${beta})</b> (β = oran), elinde <b>${n} yıl</b> veri var. Sonsal ortalamayı <span class="mono">Z·(S/n) + (1−Z)·(α/β)</span> biçiminde yazarsak, kredibilite faktörü <span class="q">Z</span> nedir?`,
+      givens:[ ["önsel oran β", String(beta), "prior"], ["yıl n", String(n), "data"],
+               ["örneklem ort. S/n", fmt(xbar,3), "data"], ["önsel ort. α/β", fmt(priorMean,3), "prior"] ],
+      qlabel:"Kredibilite faktörü Z (0–1)", unit:"",
+      answer: round(Z,3), tol:{type:"abs", eps:0.02},
+      steps:[
+        ["Sonsal ortalamayı ayrıştır.", `(α+S)/(β+n) = <span class="mono">n/(n+β)</span>·(S/n) + β/(n+β)·(α/β)`],
+        ["Veri ağırlığı bu katsayıdır.", `Z = n / (n + β)`],
+        ["Yerine koy.", `Z = ${n} / (${n} + ${beta}) = <span class="mono">${fmt(Z,3)}</span>`],
+        ["Bühlmann bağlantısı.", `β, k rolündedir → Z = n/(n+k) ile aynı`],
+      ],
+      final:`Z = <b>${fmt(Z,3)}</b> &nbsp;<span style="color:var(--faint)">(β = k olan Bühlmann)</span>`
+    };
+  }
+
+  function genL(){ // öngörü — gelecek yıl beklenen hasar
+    const {alpha,beta,n,S,aPost,bPost} = bayesParams();
+    const pred = aPost/bPost;
+    return {
+      type:"L", tag:"Bayes · öngörü",
+      hint:`Gelecek yılın hasar sayısı Poisson(λ)'dır; bilinmeyen λ ise sonsal dağılımla tanımlı. Beklenen sayı, λ'nın <b>sonsal ortalamasıdır</b> (öngörü ortalaması) — yani yine (α+S)/(β+n).`,
+      scenario:`λ için önsel <b style="color:var(--prior)">Gama(α=${alpha}, β=${beta})</b> (β = oran). <b>${n} yıl</b> içinde toplam <span class="q">${S} hasar</span> gördün. Bu risk için <span class="q">gelecek yıl</span> beklenen hasar sayısı nedir?`,
+      givens:[ ["önsel şekil α", String(alpha), "prior"], ["önsel oran β", String(beta), "prior"],
+               ["yıl n", String(n), "data"], ["toplam hasar S", String(S), "data"] ],
+      qlabel:"Gelecek yıl beklenen hasar sayısı", unit:"hasar",
+      answer: round(pred,4), tol:{type:"num", pct:0.02, abs:0.01},
+      steps:[
+        ["Gelecek yıl ~ Poisson(λ), yani beklenti = E[λ] (sonsal).", `E[N_yeni] = E[λ | veri]`],
+        ["Bu da sonsal ortalamadır.", `= (α+S) / (β+n) = ${aPost} / ${bPost}`],
+        ["Hesapla.", `= <span class="mono">${fmt(pred,4)}</span>`],
+      ],
+      final:`Gelecek yıl beklenen hasar = <b>${fmt(pred,4)}</b>`
+    };
+  }
+
   // ---------- render ----------
   function load(){
-    const t = topic==="M" ? pick(["A","B","C","D","E","F","G","H"]) : topic;
+    const t = topic==="M" ? pick(["A","B","C","D","E","F","G","H","I","J","K","L"]) : topic;
     cur = GEN[t]();
     $('ptag').textContent = cur.tag;
     // hint (İpucu)
